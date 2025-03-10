@@ -36,12 +36,16 @@ class Neural(nn.Module):
                 Front_layer_val=torch.cat([Front_layer_val,bias],dim=0)                              ## Add bias to each layer
 
                 Front_layer_val   = torch.matmul(Front_layer_val, self.weight[layer])
-                if self.active_fun=='sigmoid':
+                active_fun=self.active_fun[layer]
+                
+                if active_fun=='sigmoid':
                     Front_layer_val = 1 / (1 + torch.exp(-Front_layer_val))                                  ## activation function sigmoid
-                elif self.active_fun=='relu':
+                elif active_fun=='relu':
                     Front_layer_val = torch.max(Front_layer_val, torch.tensor([0.0]))                           ## activation function relu
-                elif self.active_fun=='tanh':
+                elif active_fun=='tanh':
                     Front_layer_val = torch.tanh(Front_layer_val)                                              ## activation function tanh
+                elif active_fun=='linear':
+                    Front_layer_val = Front_layer_val
 
             Predict.append(Front_layer_val)                                                                 ## append the prediction
 
@@ -118,43 +122,51 @@ class Neural(nn.Module):
     def model(self, test_X):                                                                 ## test the neural
         return self.forward(test_X)                                                                 ## return the prediction
 
-
-sample=Neural([1,10,1],'tanh',50)
-num=10000
+'''
+sample=Neural([1,10,1],'relu',10)
+num=3000
 X = [(torch.rand(1) ).clone().detach().to(torch.float32) for i in range(num)]               ##idk why clone and detach is needed    
 Y   = [x**2 for x in X]
-for epoch in range(10):
-    sample.train(X,Y,0.01)
-print(X[0])
-output=sample.model([X[0]])
+for epoch in range(20):
+    sample.train(X,Y,0.005)
+print(X[15])
+output=sample.model([X[15]])
 
-print(output[0])
+print(output)
 
 '''
-sample=Neural([784,3,10],'tanh',100)
+sample=Neural([784,6,3,1],['tanh','relu','linear'],30)
 (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
 X_train = nn.ParameterList()
 Y_train = nn.ParameterList()
 X_test = nn.ParameterList()
 Y_test = nn.ParameterList()
+
+
 for i, data in enumerate(train_images):
     X_train.append(torch.tensor(data.flatten()).clone().detach().to(torch.float32) )
     y=torch.zeros(10)
     y[train_labels[i]]=1
     Y_train.append(y)
-    
+X_train_tensor = torch.stack(list(X_train), dim=0)
+mean = X_train_tensor.mean(dim=0, keepdim=True)  
+std = X_train_tensor.std(dim=0, keepdim=True)    
+epsilon = 1e-8
+std = std + epsilon
+X_train_norm = (X_train_tensor - mean) / std  # shape: (N, 784)
+
+
 for i, data in enumerate(test_images):
-    print(data.flatten)
+    
     X_test.append(torch.tensor(data.flatten()).clone().detach().to(torch.float32) )
     y=torch.zeros(10)
     y[test_labels[i]]=1
     Y_test.append(y)
-sample.train(X_train,Y_train,0.1)
-output=sample.model(X_test)
-for result in output:
-    label=torch.argmax(result)
-    #print(result)
-'''
+    
+sample.train(X_train,train_labels,0.01)
+print(sample.model([X_train[8]]))
+print(test_labels[8])
+
 
 
 
